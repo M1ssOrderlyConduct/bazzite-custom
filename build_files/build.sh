@@ -26,8 +26,38 @@ systemctl enable clamav-freshclam.service
 
 # --- TrueNAS NFS Mount ---
 echo "Configuring TrueNAS NFS mount..."
-mkdir -p /mnt/truenas/prowlarr
-echo "10.0.50.95:/mnt/oZFSmandias/downloads/prowlarr /mnt/truenas/prowlarr nfs x-systemd.automount,x-systemd.mount-timeout=10,rw,soft,noatime 0 0" >> /etc/fstab
+# /mnt may be a symlink in atomic images, create mount point in /var instead
+mkdir -p /var/mnt/truenas/prowlarr
+# Use systemd mount unit instead of fstab for better atomic compatibility
+cat > /etc/systemd/system/var-mnt-truenas-prowlarr.mount << 'MOUNT'
+[Unit]
+Description=TrueNAS Prowlarr Share
+After=network-online.target
+Wants=network-online.target
+
+[Mount]
+What=10.0.50.95:/mnt/oZFSmandias/downloads/prowlarr
+Where=/var/mnt/truenas/prowlarr
+Type=nfs
+Options=rw,soft,noatime
+
+[Install]
+WantedBy=multi-user.target
+MOUNT
+
+cat > /etc/systemd/system/var-mnt-truenas-prowlarr.automount << 'AUTOMOUNT'
+[Unit]
+Description=Automount TrueNAS Prowlarr Share
+
+[Automount]
+Where=/var/mnt/truenas/prowlarr
+TimeoutIdleSec=300
+
+[Install]
+WantedBy=multi-user.target
+AUTOMOUNT
+
+systemctl enable var-mnt-truenas-prowlarr.automount
 
 # --- Flatpak Pre-configuration ---
 # Flatpaks are installed at first boot via system config
@@ -70,7 +100,7 @@ sudo freshclam || true
 echo ""
 echo "=== Setup Complete ==="
 echo "Run 'sudo tailscale up' to connect Tailscale"
-echo "TrueNAS mount: /mnt/truenas/prowlarr"
+echo "TrueNAS mount: /var/mnt/truenas/prowlarr"
 echo "Run 'claude' to start Claude Code"
 SETUP
 chmod +x /usr/bin/bazzite-custom-setup
