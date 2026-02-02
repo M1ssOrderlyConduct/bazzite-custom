@@ -24,6 +24,11 @@ systemctl enable tailscaled.service
 # ClamAV freshclam auto-update
 systemctl enable clamav-freshclam.service
 
+# --- TrueNAS NFS Mount ---
+echo "Configuring TrueNAS NFS mount..."
+mkdir -p /mnt/truenas/prowlarr
+echo "10.0.50.95:/mnt/oZFSmandias/downloads/prowlarr /mnt/truenas/prowlarr nfs x-systemd.automount,x-systemd.mount-timeout=10,rw,soft,noatime 0 0" >> /etc/fstab
+
 # --- Flatpak Pre-configuration ---
 # Flatpaks are installed at first boot via system config
 mkdir -p /usr/share/ublue-os/bazzite/flatpak
