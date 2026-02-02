@@ -15,9 +15,6 @@ dnf5 install -y btop
 # NFS utilities for TrueNAS mounts
 dnf5 install -y nfs-utils
 
-# Node.js for Claude Code
-dnf5 install -y nodejs npm
-
 # --- Enable Services ---
 echo "Enabling services..."
 
@@ -29,7 +26,6 @@ systemctl enable clamav-freshclam.service
 
 # --- Flatpak Pre-configuration ---
 # Flatpaks are installed at first boot via system config
-# Create flatpak list for first-boot installation
 mkdir -p /usr/share/ublue-os/bazzite/flatpak
 cat > /usr/share/ublue-os/bazzite/flatpak/custom-install << 'FLATPAKS'
 com.protonmail.protonpass
@@ -38,29 +34,40 @@ dev.lizardbyte.app.Sunshine
 com.github.davem.ClamTk
 FLATPAKS
 
-# --- Claude Code ---
-# Install globally via npm (will be available after first boot)
-npm install -g @anthropic-ai/claude-code || echo "Claude Code will need manual install post-boot"
-
 # --- Post-install script for user setup ---
-mkdir -p /usr/local/bin
-cat > /usr/local/bin/bazzite-custom-setup << 'SETUP'
+# Note: Claude Code installed via Homebrew post-boot (npm global doesn't work in atomic builds)
+cat > /usr/bin/bazzite-custom-setup << 'SETUP'
 #!/bin/bash
 # Run once after first boot to complete setup
 
+echo "=== Bazzite Custom Setup ==="
+
+# Install Flatpaks
 echo "Installing Flatpaks..."
 flatpak install -y flathub com.protonmail.protonpass
 flatpak install -y flathub com.moonlight_stream.Moonlight
 flatpak install -y flathub dev.lizardbyte.app.Sunshine
 flatpak install -y flathub com.github.davem.ClamTk
 
-echo "Updating ClamAV definitions..."
-sudo freshclam
+# Install Claude Code via Homebrew
+echo "Installing Claude Code..."
+if command -v brew &> /dev/null; then
+    brew install node
+    npm install -g @anthropic-ai/claude-code
+else
+    echo "Install Homebrew first: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+fi
 
-echo "Setup complete!"
+# Update ClamAV definitions
+echo "Updating ClamAV definitions..."
+sudo freshclam || true
+
+echo ""
+echo "=== Setup Complete ==="
 echo "Run 'sudo tailscale up' to connect Tailscale"
 echo "TrueNAS mount: /mnt/truenas/prowlarr"
+echo "Run 'claude' to start Claude Code"
 SETUP
-chmod +x /usr/local/bin/bazzite-custom-setup
+chmod +x /usr/bin/bazzite-custom-setup
 
 echo "=== Build Complete ==="
