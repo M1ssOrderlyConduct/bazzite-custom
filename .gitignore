@@ -1,0 +1,9 @@
+# Never commit the private signing key!
+cosign.key
+*.key
+
+# Build artifacts
+*.tar
+*.qcow2
+*.iso
+*.raw
